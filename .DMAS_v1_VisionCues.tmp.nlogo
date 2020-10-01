@@ -201,7 +201,7 @@ to flock
     ;; nearest neighbor in cone radius-vision and angle-field_of_view
     if any? preys in-cone vision fov
     [
-      ifelse distance nearest-neighbor < minimum-separation ;; preys must maintain a minimam distance between each other
+      ifelse distance nearest-neighbor < minimum-separation ;; p
       [separate]
       [cohere
         align]
