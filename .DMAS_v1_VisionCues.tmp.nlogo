@@ -201,7 +201,7 @@ to flock
     ;; nearest neighbor in cone radius-vision and angle-field_of_view
     if any? preys in-cone vision fov
     [
-      ifelse distance nearest-neighbor < minimum-separation ;; p
+      ifelse distance nearest-neighbor < minimum-separation ;; preys must maintain a minimam distance between each other
       [separate]
       [cohere
         align]
@@ -322,7 +322,7 @@ to evaluate-flock
   ]
 end
 
-to adjust-prey-speed
+to adjust-prey-speed ;;matches a turtle's speed with the rest of the flock.
   ifelse max [speed] of flockmates > speed + .1
   [ set speed speed + .1] ;;speed up if any flockmate is moving faster
   [ if speed > min-prey-speed
@@ -330,16 +330,16 @@ to adjust-prey-speed
       set color blue] ]
 end
 
-to find-flockmates
+to find-flockmates ;;finds potential flockmates for a flockless turtle
   set flockmates other preys in-radius vision
 end
 
-to find-nearest-neighbor
+to find-nearest-neighbor ;;finds a turtle's nearest neighbour within a flock
   set nearest-neighbor min-one-of flockmates [distance myself]
 end
 
 to separate
-  ;; if there is a nearest neighbor in the flock in the 60degree field of view withini the minimum separation distance
+  ;; if there is a nearest neighbor in the flock in the 60degree field of view within the minimum separation distance
   ;; then slow this turtle down or turn
   ifelse member? nearest-neighbor flockmates in-cone minimum-separation 60
   [
