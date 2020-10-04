@@ -173,7 +173,7 @@ end
 to scare-right  ;; prey on right side will flee right
   ask preys in-cone vision 180 [
     if any? predators in-cone vision 270 [
-      rt (flee-coefficient / 100) * (subtract-headings (towards myself - 90) heading)
+      rt (prey-turn-coefficient / 100) * (subtract-headings (towards myself - 90) heading)
       set speed max-prey-speed
       set color red
     ]
@@ -183,7 +183,7 @@ end
 to scare-left ;; prey on left side will flee left
   ask preys in-cone vision 180 [
     if any? predators in-cone vision 270 [
-      rt (flee-coefficient / 100) * (subtract-headings (towards myself + 90) heading)
+      rt (prey-turn-coefficient / 100) * (subtract-headings (towards myself + 90) heading)
       set speed max-prey-speed
       set color red
     ]
@@ -395,12 +395,14 @@ to-report get-delay [ delay-value ]
 end
 
 to-report average-flock-heading-deviation
+  ;; This reports the mean deviation of all the preys in the flock from it's flock heading
   let average-flock-heading average-schoolmate-heading flock-members
   let sum-deviation sum [ subtract-headings heading average-flock-heading ] of flock-members
   report ( sum-deviation / ( count flock-members ) )
 end
 
 to-report get-flock-size [ flock-ref ]
+  ;; This returns the size of the flock
   if flock-ref = nobody [ report 0 ]
   ask flock-ref
   [
@@ -410,6 +412,7 @@ to-report get-flock-size [ flock-ref ]
 end
 
 to-report average-schoolmate-heading [ schoolmates ]
+  ;; This returns the average heading of all preys in the flock
   let x-component sum [dx] of schoolmates
   let y-component sum [dy] of schoolmates
   ifelse x-component = 0 and y-component = 0
@@ -418,10 +421,12 @@ to-report average-schoolmate-heading [ schoolmates ]
 end
 
 to cohere
+  ;; This handles cohesion in the flock where it is dependent on the cohere coefficient
   rt (cohere-coefficient / 100) * (subtract-headings average-heading-towards-flockmates heading)
 end
 
 to-report average-heading-towards-flockmates
+  ;; This returns the mean heading angle of the prey towards it's flockmates.
   let x-component mean [sin (towards myself + 180)] of flockmates
   let y-component mean [cos (towards myself + 180)] of flockmates
   ifelse x-component = 0 and y-component = 0
@@ -430,12 +435,14 @@ to-report average-heading-towards-flockmates
 end
 
 to-report flock-center [ flock-ref ]
+  ;; This returns the centre of the flock. It is called when we determine if a particular prey belongs to a flock.
   let x-cord mean [ xcor ] of [ flock-members ] of flock-ref
   let y-cord mean [ ycor ] of [ flock-members ] of flock-ref
   report ( list x-cord y-cord )
 end
 
 to-report average-distance-from-flockmates [ schoolmates ]
+  ;;; Returns the mean distance of far a particular prey is from it's flockmates.
   let turtle-list [ self ] of schoolmates
   let value 0
   foreach ( range count schoolmates )
@@ -448,6 +455,7 @@ to-report average-distance-from-flockmates [ schoolmates ]
 end
 
 to-report average-flock-spread [ schoolmates ]
+  ;; returns the amount of distance the flock has spread in terms of patches.
   let value 0
   ;set val 0
   ask schoolmates
@@ -459,6 +467,8 @@ to-report average-flock-spread [ schoolmates ]
 end
 
 to-report cap-value [ value minval maxval ]
+  ;;returns the maxval if the number is above max
+  ;;returns minval if the number is below min
   ifelse value > maxval
   [
     report maxval
@@ -473,6 +483,7 @@ to-report cap-value [ value minval maxval ]
 end
 
 to-report flock-velocity
+  ;; The velocity at which the flock is moving
   if count flock-members = 0 [ report 0 ]
   let x-cord mean [ dx * speed ] of flock-members
   let y-cord mean [ dy * speed ] of flock-members
@@ -483,10 +494,12 @@ to-report flock-velocity
 end
 
 to-report average-flock-lifetime
+  ;;This checks if a flock has members and if there are members it returns the number of ticks the flock has lived
   ifelse empty? flock-lifetime-counter [ report 0 ] [ report mean flock-lifetime-counter ]
 end
 
 to-report average-flock-size
+  ;; returns the average size of the flock
   let result mean ( [ count flock-members ] of flock-holders )
   report result
 end
@@ -519,10 +532,10 @@ ticks
 30.0
 
 BUTTON
-103
-29
-166
-62
+101
+15
+164
+48
 Go
 go
 T
@@ -536,10 +549,10 @@ NIL
 1
 
 BUTTON
-20
-28
-84
-61
+18
+14
+82
+47
 Setup
 setup
 NIL
@@ -553,10 +566,10 @@ NIL
 1
 
 SLIDER
-19
-113
-191
-146
+20
+128
+192
+161
 preyPop
 preyPop
 0
@@ -568,10 +581,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-20
-155
-192
-188
+21
+170
+193
+203
 predPop
 predPop
 0
@@ -583,15 +596,15 @@ NIL
 HORIZONTAL
 
 SLIDER
-20
-240
-192
-273
+21
+255
+193
+288
 Noise
 Noise
 0
 100
-3.0
+8.0
 1
 1
 Degrees
@@ -599,9 +612,9 @@ HORIZONTAL
 
 SLIDER
 18
-328
+453
 190
-361
+486
 fov
 fov
 0
@@ -613,10 +626,10 @@ Degrees
 HORIZONTAL
 
 SLIDER
-19
-195
-191
-228
+20
+210
+192
+243
 latency
 latency
 0
@@ -628,10 +641,10 @@ ticks
 HORIZONTAL
 
 BUTTON
-20
-75
-83
-108
+18
+61
+81
+94
 Step
 go
 NIL
@@ -645,10 +658,10 @@ NIL
 1
 
 SLIDER
-17
-380
-189
-413
+19
+415
+191
+448
 vision
 vision
 1
@@ -660,10 +673,10 @@ patches
 HORIZONTAL
 
 SLIDER
-17
-424
-198
-457
+18
+492
+199
+525
 minimum-separation
 minimum-separation
 0
@@ -676,9 +689,9 @@ HORIZONTAL
 
 SLIDER
 19
-287
+338
 191
-320
+371
 min-prey-speed
 min-prey-speed
 0
@@ -690,10 +703,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-19
-467
-191
-500
+682
+591
+854
+624
 separate-coefficient
 separate-coefficient
 0
@@ -705,10 +718,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-787
-267
-959
-300
+271
+593
+443
+626
 align-coefficient
 align-coefficient
 1
@@ -720,10 +733,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-787
-314
-959
-347
+481
+592
+653
+625
 cohere-coefficient
 cohere-coefficient
 1
@@ -735,10 +748,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-1205
-86
-1313
-131
+1219
+111
+1327
+156
 Number of Flocks
 count flock-holders
 0
@@ -746,10 +759,10 @@ count flock-holders
 11
 
 SWITCH
-784
-26
-965
-59
+786
+74
+967
+107
 visualize-flock-creation
 visualize-flock-creation
 1
@@ -757,10 +770,10 @@ visualize-flock-creation
 -1000
 
 SWITCH
-787
-72
-890
-105
+786
+119
+889
+152
 verbose
 verbose
 1
@@ -769,9 +782,9 @@ verbose
 
 SWITCH
 786
-125
+165
 917
-158
+198
 flock-color-on
 flock-color-on
 0
@@ -779,10 +792,10 @@ flock-color-on
 -1000
 
 MONITOR
-1205
-27
-1316
-72
+1219
+52
+1330
+97
 Largest Flock Size
 count [ flock-members ] of max-one-of flock-holders [ count flock-members ]
 0
@@ -790,10 +803,10 @@ count [ flock-members ] of max-one-of flock-holders [ count flock-members ]
 11
 
 SLIDER
-786
-222
-959
-255
+18
+608
+191
+641
 flock-detection-range
 flock-detection-range
 0
@@ -805,10 +818,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-786
-174
-976
-207
+18
+569
+208
+602
 flock-max-angle-devation
 flock-max-angle-devation
 0
@@ -820,10 +833,10 @@ NIL
 HORIZONTAL
 
 PLOT
-976
-213
-1195
-363
+1047
+253
+1266
+403
 average flock heading deviation
 NIL
 NIL
@@ -838,10 +851,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot mean [ average-flock-heading-deviation ] of flock-holders"
 
 PLOT
-979
-375
-1179
-525
+1050
+415
+1250
+565
 average flock velocity
 NIL
 NIL
@@ -856,10 +869,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot mean [ flock-velocity ] of flock-holders"
 
 MONITOR
-1031
-147
-1166
-192
+1351
+56
+1486
+101
 Average flock velocity
 mean [ flock-velocity ] of flock-holders
 3
@@ -867,10 +880,10 @@ mean [ flock-velocity ] of flock-holders
 11
 
 PLOT
-1207
-213
-1407
-363
+1278
+253
+1478
+403
 Average flock size
 NIL
 NIL
@@ -885,10 +898,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot mean [ count flock-members ] of flock-holders"
 
 PLOT
-1206
-373
-1406
-523
+1277
+413
+1477
+563
 Average flock lifetime
 NIL
 NIL
@@ -903,10 +916,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot average-flock-lifetime"
 
 MONITOR
-1029
-28
-1165
-73
+1043
+53
+1179
+98
 Maximum flock-lfietime
 max flock-lifetime-counter
 0
@@ -914,10 +927,10 @@ max flock-lifetime-counter
 11
 
 MONITOR
-1030
-87
-1195
-132
+1044
+112
+1209
+157
 Average Flock Spread
 mean [ average-flock-spread flock-members ] of flock-holders
 3
@@ -925,10 +938,10 @@ mean [ average-flock-spread flock-members ] of flock-holders
 11
 
 SLIDER
-780
-440
-952
-473
+778
+321
+950
+354
 predator-burst-energy
 predator-burst-energy
 0
@@ -940,10 +953,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-780
-483
-954
-516
+778
+364
+952
+397
 predator-vision
 predator-vision
 0
@@ -955,10 +968,10 @@ patches
 HORIZONTAL
 
 SLIDER
-513
-568
-768
-601
+779
+491
+1034
+524
 predator-turn-coefficient
 predator-turn-coefficient
 0
@@ -970,10 +983,10 @@ percentage
 HORIZONTAL
 
 SLIDER
-781
-522
-953
-555
+779
+403
+951
+436
 min-predator-speed
 min-predator-speed
 0
@@ -985,10 +998,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-780
-399
-952
-432
+778
+280
+950
+313
 burst-recharge-time
 burst-recharge-time
 0
@@ -1000,10 +1013,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-782
-563
-954
-596
+780
+444
+952
+477
 max-predator-speed
 max-predator-speed
 0
@@ -1015,12 +1028,12 @@ NIL
 HORIZONTAL
 
 SLIDER
-783
-602
-955
-635
-flee-coefficient
-flee-coefficient
+18
+530
+199
+563
+prey-turn-coefficient
+prey-turn-coefficient
 0
 100
 30.0
@@ -1030,10 +1043,10 @@ flee-coefficient
 HORIZONTAL
 
 SLIDER
-16
-508
-188
-541
+19
+375
+191
+408
 max-prey-speed
 max-prey-speed
 0
@@ -1043,6 +1056,76 @@ max-prey-speed
 1
 NIL
 HORIZONTAL
+
+TEXTBOX
+19
+309
+193
+349
+The parameters for Prey
+16
+0.0
+1
+
+TEXTBOX
+773
+248
+966
+288
+Parameters for Predators
+16
+0.0
+1
+
+TEXTBOX
+272
+566
+785
+594
+Coefficients that define the rules of Alignment,Cohesion and Separation\n
+16
+0.0
+1
+
+TEXTBOX
+1220
+224
+1370
+244
+Relevant Plots
+16
+0.0
+1
+
+TEXTBOX
+1167
+25
+1383
+65
+Relevant measurements
+16
+0.0
+1
+
+TEXTBOX
+790
+49
+993
+69
+For visualization/debugging
+16
+0.0
+1
+
+TEXTBOX
+36
+102
+186
+122
+Global parameters
+16
+0.0
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
