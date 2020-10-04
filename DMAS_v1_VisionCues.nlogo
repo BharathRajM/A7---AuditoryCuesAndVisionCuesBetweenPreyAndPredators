@@ -45,11 +45,11 @@ flock-holders-own [
   creation-time
 ]
 
-to setup
+to setup ;; clears and initializes the experiment setup
   clear-all
   set flock-lifetime-counter []
   set flock-color-list ( list grey orange brown yellow green lime turquoise cyan sky violet magenta pink )
-  create-preys preyPop
+  create-preys preyPop ;; initializes each prey agent
   [
     set size 1
     set color blue
@@ -59,7 +59,7 @@ to setup
     set is-in-flock False
   ]
 
-  create-predators predPop
+  create-predators predPop ;; initializes each predator agent
   [
     set size 1
     set color red
@@ -72,10 +72,10 @@ to setup
   reset-ticks
 end
 
-to go
+to go ;; Starts running the simulation until told to stop.
   set tick-counter ( tick-counter + 1 )
   ask flock-holders with [ count flock-members = 0 ] [ die ]
-  ifelse flock-color-on
+  ifelse flock-color-on ;; If the prey agent is part of a flock, then we change its colour to match the flock. If the flock-colour is off, set the colour to blue.
   [
     if count flock-holders > 0
     [
@@ -92,7 +92,7 @@ to go
     ]
     ask preys with [ is-in-flock = False ] [ set color blue ]
   ]
-  [ ask preys [ set color blue ] ]
+  [ ask preys [ set color blue ] ] ;; if the prey agent is alone, set its colour to blue.
   ask preys
   [
     flock
@@ -100,7 +100,7 @@ to go
     evaluate-flock
   ]
 
-  ask predators
+  ask predators ;;
   [
     set prey-in-vision preys in-radius predator-vision
 
@@ -120,17 +120,17 @@ to go
 end
 
 
-to chase-nearest-prey ;; predator procedure
+to chase-nearest-prey ;; Predator procedure: pounce upon sighting a prey
   set nearest-prey min-one-of prey-in-vision [distance myself]
   rt (predator-turn-coefficient / 100) * (subtract-headings (towards nearest-prey) heading)
 end
 
 
-to wander ;; only predators use
+to wander ;; Predator procedure: wander when no prey is in sight
   rt (random 30) - 15
 end
 
-to eat  ;; predator procedure
+to eat  ;; predator procedure: Eat prey
   let nearby (turtle-set preys-here preys-on neighbors)
   if any? nearby and burst-energy > 0 [ ;; if there is a catch, stop to eat the fish (cannot eat again until burst recharges)
     set burst-energy 0
@@ -141,14 +141,14 @@ to eat  ;; predator procedure
   ]
 end
 
-to adjust-predator-speed ;; predator procedure
+to adjust-predator-speed ;; predator procedure:
   set prey-in-front preys in-cone predator-vision 90 ;; find prey in front of predator
 
   ifelse any? prey-in-front and burst-energy > 0 ;; burst if there is a target and have energy
   [ set bursting? true ]
   [ set bursting? false ]
 
-  ifelse bursting?
+  ifelse bursting? ;; Accelerate if max speed has not yet been reached
   [ if speed <= max-predator-speed
     [ set speed speed + .3
       set burst-energy burst-energy - 1 ]
@@ -193,7 +193,7 @@ end
 
 
 to flock
-  find-flockmates
+  find-flockmates ;; Other preys in sight will be set as flockmates
   if any? flockmates
   [
     find-nearest-neighbor
@@ -201,7 +201,7 @@ to flock
     ;; nearest neighbor in cone radius-vision and angle-field_of_view
     if any? preys in-cone vision fov
     [
-      ifelse distance nearest-neighbor < minimum-separation
+      ifelse distance nearest-neighbor < minimum-separation ;; preys must maintain a minimam distance between each other
       [separate]
       [cohere
         align]
@@ -322,7 +322,7 @@ to evaluate-flock
   ]
 end
 
-to adjust-prey-speed
+to adjust-prey-speed ;;matches a turtle's speed with the rest of the flock.
   ifelse max [speed] of flockmates > speed + .1
   [ set speed speed + .1] ;;speed up if any flockmate is moving faster
   [ if speed > min-prey-speed
@@ -330,16 +330,16 @@ to adjust-prey-speed
       set color blue] ]
 end
 
-to find-flockmates
+to find-flockmates ;;finds potential flockmates for a flockless turtle
   set flockmates other preys in-radius vision
 end
 
-to find-nearest-neighbor
+to find-nearest-neighbor ;;finds a turtle's nearest neighbour within a flock
   set nearest-neighbor min-one-of flockmates [distance myself]
 end
 
 to separate
-  ;; if there is a nearest neighbor in the flock in the 60degree field of view withini the minimum separation distance
+  ;; if there is a nearest neighbor in the flock in the 60degree field of view within the minimum separation distance
   ;; then slow this turtle down or turn
   ifelse member? nearest-neighbor flockmates in-cone minimum-separation 60
   [
