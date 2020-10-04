@@ -142,7 +142,7 @@ to eat  ;; predator procedure: Eat prey
 end
 
 to adjust-predator-speed ;; predator procedure:
-  set prey-in-front preys in-cone predator-vision 90 ;; find prey in front of predator
+  set prey-in-front preys in-cone predator-vision 90 ;; find prey in 90degrees field of view in (predator-vision) number of patches
 
   ifelse any? prey-in-front and burst-energy > 0 ;; burst if there is a target and have energy
   [ set bursting? true ]
@@ -213,6 +213,10 @@ to flock
 end
 
 to evaluate-flock
+  ;;Here we check if a prey belongs to a flock and evaluate the colour of the respective flock
+  ;;We also set the lifetime of the flock form the time it is created and call the required reporter to display the flock lifetime
+  ;;If a prey is not in any flock then it becomes a flock of it's own with the flocksize of 1
+
   if flock-reference = Nobody [ set is-in-flock False ] ; make sure anything not in a flock doesn't think it is in a flock
   if is-in-flock = True ; checking to see if a flock has died out
   [
