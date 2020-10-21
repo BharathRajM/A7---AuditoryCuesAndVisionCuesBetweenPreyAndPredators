@@ -221,7 +221,7 @@ to scare-right  ;; prey on right side will flee right
 
       ;;set chemical chemical + 1 ; agents drop 100 units of chemical on patch below
 
-      ask patches in-radius 5
+      ask patches in-radius audio_range
       [ set pcolor yellow
         set countdown audioduration]
 
@@ -238,7 +238,7 @@ to scare-left ;; prey on left side will flee left
       ;; add auditory cue here
       ;; disperse the colour around the region of the prey
 
-      ask patches in-radius 5
+      ask patches in-radius audio_range
       [ set pcolor yellow
         set countdown audioduration]
 
@@ -595,8 +595,8 @@ GRAPHICS-WINDOW
 30
 -30
 30
-0
-0
+1
+1
 1
 ticks
 30.0
@@ -644,7 +644,7 @@ preyPop
 preyPop
 0
 100
-40.0
+46.0
 1
 1
 NIL
@@ -659,7 +659,7 @@ predPop
 predPop
 0
 100
-1.0
+4.0
 1
 1
 NIL
@@ -1121,17 +1121,17 @@ max-prey-speed
 max-prey-speed
 0
 2
-1.4
+1.2
 0.1
 1
 NIL
 HORIZONTAL
 
 TEXTBOX
-14
-363
-188
-403
+17
+378
+191
+418
 The parameters for Prey
 16
 0.0
@@ -1206,7 +1206,7 @@ audioduration
 audioduration
 0
 100
-5.0
+2.0
 1
 1
 NIL
@@ -1239,6 +1239,21 @@ predator-kill-counter
 17
 1
 11
+
+SLIDER
+20
+343
+192
+376
+audio_range
+audio_range
+2
+20
+20.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
