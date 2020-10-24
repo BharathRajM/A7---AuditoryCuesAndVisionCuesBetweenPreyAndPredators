@@ -114,6 +114,12 @@ to setup ;; clears and initializes the experiment setup
   ]
 
   set tick-counter 0
+  ask trees
+  [
+    ask patches in-radius 1
+    [set pcolor green
+    ]
+  ]
   reset-ticks
 end
 
@@ -138,13 +144,6 @@ to go ;; Starts running the simulation until told to stop.
     ask preys with [ is-in-flock = False ] [ set color blue ]
   ]
   [ ask preys [ set color blue ] ] ;; if the prey agent is alone, set its colour to blue.
-
-  ask trees
-  [
-    ask patches in-radius 1
-    [set pcolor green
-    ]
-  ]
 
   ask preys
   [
@@ -279,8 +278,10 @@ to scare-right  ;; prey on right side will flee right
       ;;set chemical chemical + 1 ; agents drop 100 units of chemical on patch below
 
       ask patches in-radius audio_range
-      [ if pcolor != green [set pcolor yellow]
-        if pcolor != green [set countdown audioduration]
+      [ ;;if pcolor != green [set pcolor yellow]
+        set pcolor yellow
+        set countdown audioduration
+        ;;if pcolor != green [set countdown audioduration]
       ]
       rt (prey-turn-coefficient / 100) * (subtract-headings (towards myself - 90) heading)
       set speed max-prey-speed
@@ -296,8 +297,10 @@ to scare-left ;; prey on left side will flee left
       ;; disperse the colour around the region of the prey
 
       ask patches in-radius audio_range
-      [ if pcolor != green [set pcolor yellow]
-        if pcolor != green [set countdown audioduration]
+      [ ;;if pcolor != green [set pcolor yellow]
+        set pcolor yellow
+        set countdown audioduration
+        ;;if pcolor != green [set countdown audioduration]
       ]
       ;;ask patches [ set tick_time_created tick-counter]
       rt (prey-turn-coefficient / 100) * (subtract-headings (towards myself + 90) heading)
@@ -1306,7 +1309,7 @@ audio_range
 audio_range
 2
 20
-5.0
+6.0
 1
 1
 NIL
