@@ -81,7 +81,7 @@ to setup ;; clears and initializes the experiment setup
   clear-all
   set flock-lifetime-counter []
   set predator-kill-counter 0
-  set flock-color-list ( list grey orange brown green lime turquoise cyan sky violet magenta pink )
+  set flock-color-list ( list grey orange lime turquoise cyan sky violet magenta pink )
   create-preys preyPop ;; initializes each prey agent
   [
     set size 1
