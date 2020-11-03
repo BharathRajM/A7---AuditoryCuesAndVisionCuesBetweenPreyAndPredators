@@ -892,7 +892,7 @@ vision
 vision
 1
 15
-6.0
+0.0
 1
 1
 patches
@@ -1405,7 +1405,7 @@ audio_range
 audio_range
 2
 20
-10.0
+0.0
 1
 1
 NIL
@@ -1420,7 +1420,7 @@ clusterNumber
 clusterNumber
 0
 10
-0.0
+10.0
 1
 1
 NIL
@@ -1942,6 +1942,100 @@ NetLogo 6.1.1
       <value value="205"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="vision">
+      <value value="6"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="audioduration">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-predator-speed">
+      <value value="1.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="cohere-coefficient">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prey-turn-coefficient">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-prey-speed">
+      <value value="1.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="min-prey-speed">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="predPop">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="audio_range">
+      <value value="0"/>
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="predator-turn-coefficient">
+      <value value="15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="preyPop">
+      <value value="50"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="predator-burst-energy">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="separate-coefficient">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="verbose">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="flock-color-on">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="minimum-separation">
+      <value value="0.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visualize-flock-creation">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="min-predator-speed">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="flock-max-angle-devation">
+      <value value="120"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="Final Big Experiment" repetitions="40" sequentialRunOrder="false" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="4000"/>
+    <metric>count turtles</metric>
+    <metric>predator-kill-number</metric>
+    <metric>average-flock-lifetime</metric>
+    <metric>max flock-lifetime-counter</metric>
+    <metric>largest-flock-size</metric>
+    <enumeratedValueSet variable="latency">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="Noise">
+      <value value="8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="predator-vision">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="flock-detection-range">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="align-coefficient">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="clusterNumber">
+      <value value="0"/>
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="burst-recharge-time">
+      <value value="59"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fov">
+      <value value="205"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="vision">
+      <value value="0"/>
       <value value="6"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="audioduration">
