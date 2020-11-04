@@ -1,3 +1,8 @@
+;; New contributions to the code are indicated as follows -
+;; if "NEW-CONTRIBUTION" is written above a method, it indicates newly written method
+;; if "MODIFIED" is written above a method, it indicates that a previously written method from the base model is modified for our model.
+
+
 extensions [array]
 globals
 [
@@ -5,17 +10,15 @@ globals
   flock-color-list ;; used to store a list of colours for each flock
   tick-counter ;; used to refer and increment steps/ticks in netlogo
   flock-lifetime-counter ;; used to refer the liftetime of the flock
-  predator-kill-counter
+  predator-kill-counter ;; a counter for number of kills made by the predator
 ]
 
 breed [ preys prey ] ;; the breed of preys are created here
 breed [ predators predator ] ;; the breed of predators are created here
 breed [ flock-holders flock-holder ] ;; A placeholder entity that stores flock data and can be queried easily with certain functions
 
-patches-own
-[
-  countdown ;; this is used to ensure that a normal patch remains an auditory patch for "countdown" amount of time (audioduration slider)
-]
+;;NEW-CONTRIBUTION
+breed [ trees tree] ;; the breed for trees (obstacles)
 
 preys-own [
   flockmates ;; set of all nearby fishes
@@ -26,6 +29,14 @@ preys-own [
   flock-reference ; variable that references the flock-holder to which this turtle belongs
 ]
 
+
+;;NEW-CONTRIBUTION
+patches-own
+[
+  countdown ;; this is used to ensure that a normal patch remains an auditory patch for "countdown" amount of time (audioduration slider)
+]
+
+;;NEW-CONTRIBUTION
 predators-own [
   prey-in-vision ;; prey within vision radius
   nearest-prey ;; shortest distance prey
@@ -43,18 +54,44 @@ flock-holders-own [
   creation-time ;; used to calculate flock lifetime
 ]
 
-to reset
+;;NEW-CONTRIBUTION
+to reset ;;A function for the "Reset" button which restores the default parameters
   clear-all
   reset-ticks
-  set Noise 5
   set preyPop 40
+  set predPop 2
+  set Noise 8
+  set audioduration 4
+  set audio_range 5
+  set min-prey-speed 0.1
+  set max-prey-speed 1.4
+  set vision 6
+  set fov 205
+  set minimum-separation 0.50
+  set prey-turn-coefficient 30
+  set flock-max-angle-devation 120
+  set flock-detection-range 2.0
+  set align-coefficient 30
+  set cohere-coefficient 10
+  set separate-coefficient 10
+  set burst-recharge-time 59
+  set predator-burst-energy 5
+  set predator-vision 3
+  set min-predator-speed 0.1
+  set max-predator-speed 1.4
+  set predator-turn-coefficient 15
+  set visualize-flock-creation false
+  set verbose false
+  set flock-color-on true
+  set clusterNumber 5
 end
 
+;;MODIFIED
 to setup ;; clears and initializes the experiment setup
   clear-all
   set flock-lifetime-counter []
   set predator-kill-counter 0
-  set flock-color-list ( list grey orange brown green lime turquoise cyan sky violet magenta pink )
+  set flock-color-list ( list grey orange cyan sky violet magenta pink )
   create-preys preyPop ;; initializes each prey agent
   [
     set size 1
@@ -74,6 +111,48 @@ to setup ;; clears and initializes the experiment setup
     set burst-energy predator-burst-energy
 
   ]
+  ;;Create sets of 5 trees. Using the slider between 0 and 10 clusters of trees can be created
+  repeat clusterNumber [
+    let x random-xcor
+    let y random-ycor
+
+    create-trees 1
+    [
+      set size 3
+      set shape "tree"
+      set color green
+      setxy x y
+    ]
+    create-trees 1
+    [
+      set size 3
+      set shape "tree"
+      set color green
+      setxy (x + 2) y
+    ]
+    create-trees 1
+    [
+      set size 3
+      set shape "tree"
+      set color green
+      setxy x (y + 2)
+    ]
+    create-trees 1
+    [
+      set size 3
+      set shape "tree"
+      set color green
+      setxy (x - 2) y
+    ]
+    create-trees 1
+    [
+      set size 3
+      set shape "tree"
+      set color green
+      setxy x (y - 2)
+    ]
+  ]
+
 
   ask patches
   [
@@ -81,10 +160,17 @@ to setup ;; clears and initializes the experiment setup
   ]
 
   set tick-counter 0
+  ask trees
+  [
+    ask patches in-radius 2
+    [set pcolor green
+    ]
+  ]
   reset-ticks
 end
 
-to go ;; Starts running the simulation until told to stop.
+;;MODIFIED
+to go ;; Starts running the simulation until told to stop
   set tick-counter ( tick-counter + 1 )
   ask flock-holders with [ count flock-members = 0 ] [ die ]
   ifelse flock-color-on ;; If the prey agent is part of a flock, then we change its colour to match the flock. If the flock-colour is off, set the colour to blue.
@@ -105,26 +191,38 @@ to go ;; Starts running the simulation until told to stop.
     ask preys with [ is-in-flock = False ] [ set color blue ]
   ]
   [ ask preys [ set color blue ] ] ;; if the prey agent is alone, set its colour to blue.
+
   ask preys
   [
     flock
     add-error      ;;add some random noise to the flock
     evaluate-flock
     ;; identify if they are in the auditory patch
+    ;avoid-trees-prey
     check-patch    ;;identify if it is in the auditory patch
   ]
 
   ask predators ;;
   [
-    set prey-in-vision preys in-radius predator-vision
+    ;if patch is green, thus predator is in woods, the vision will be halved.
+    ifelse pcolor = green
+      [set prey-in-vision preys in-radius (predator-vision * 0.5)]
+      [set prey-in-vision preys in-radius predator-vision]
 
     ifelse any? prey-in-vision
     [ chase-nearest-prey ]  ;; point towards nearest prey
     [ wander ] ;; wander if no prey in sight
-
     adjust-predator-speed  ;; predator will speed up when making an attack
     scare-prey  ;; prey fleeing starts at predator because of control flow (scare-right, scare-left)
     eat ;; eat prey if within neighbors
+  ]
+
+  ;;Make sure patches around trees are always green
+  ask trees
+  [
+    ask patches in-radius 2
+    [set pcolor green
+    ]
   ]
 
   ask patches
@@ -142,7 +240,8 @@ to go ;; Starts running the simulation until told to stop.
       set countdown 0
       ask patches in-radius 3
       [
-        set pcolor black
+        ;;green patches never go to black
+        if pcolor != green [set pcolor black]
       ]
     ]
   ]
@@ -151,26 +250,23 @@ to go ;; Starts running the simulation until told to stop.
   tick
 end
 
-to check-patch
-  ;;identify if it is in the auditory patch
-   if pcolor = yellow
-   [
 
-    rt (prey-turn-coefficient / 100) * (-180 + random 361)
-    set speed (0.8 * max-prey-speed)
-   ]
-end
 
+
+;; ALL FUNCTIONS RELATED TO PREDATOR
+
+;;NEW-CONTRIBUTION
 to chase-nearest-prey ;; Predator procedure: pounce upon sighting a prey
   set nearest-prey min-one-of prey-in-vision [distance myself]
   rt (predator-turn-coefficient / 100) * (subtract-headings (towards nearest-prey) heading)
 end
 
-
+;;NEW-CONTRIBUTION
 to wander ;; Predator procedure: wander when no prey is in sight
   rt (random 30) - 15
 end
 
+;;NEW-CONTRIBUTION
 to eat  ;; predator procedure: Eat prey
   let nearby (turtle-set preys-here preys-on neighbors)
   if any? nearby and burst-energy > 0 [ ;; if there is a catch, stop to eat the fish (cannot eat again until burst recharges)
@@ -183,7 +279,10 @@ to eat  ;; predator procedure: Eat prey
   ]
 end
 
+;;NEW-CONTRIBUTION
 to adjust-predator-speed ;; predator procedure:
+  ;;ifelse pcolor = green
+  ;;  [set prey-in-front preys in-cone (predator-vision * 0.5) 90]
   set prey-in-front preys in-cone predator-vision 90 ;; find prey in 90degrees field of view in (predator-vision) number of patches
 
   ifelse any? prey-in-front and burst-energy > 0 ;; burst if there is a target and have energy
@@ -204,62 +303,33 @@ to adjust-predator-speed ;; predator procedure:
   ]
 end
 
-to scare-prey ;; predator procedure
-  rt 90
-  scare-right  ;; prey on right side will flee right
-  rt 180
-  scare-left  ;; prey on left side will flee left
-  rt 90
-end
-
-to scare-right  ;; prey on right side will flee right
-  ask preys in-cone vision 180 [
-    if any? predators in-cone vision 270 [
-
-      ;; add auditory cue here
-      ;; disperse the colour around the region of the prey
-
-      ;;set chemical chemical + 1 ; agents drop 100 units of chemical on patch below
-
-      ask patches in-radius 5
-      [ set pcolor yellow
-        set countdown audioduration]
-
-      rt (prey-turn-coefficient / 100) * (subtract-headings (towards myself - 90) heading)
-      set speed max-prey-speed
-      ;;set color red
-    ]
+;;NEW-CONTRIBUTION
+to check-patch-predator ;; To check if predator is in the woods
+  if pcolor = black [
+    set speed min-predator-speed
   ]
-end
-
-to scare-left ;; prey on left side will flee left
-  ask preys in-cone vision 180 [
-    if any? predators in-cone vision 270 [
-      ;; add auditory cue here
-      ;; disperse the colour around the region of the prey
-
-      ask patches in-radius 5
-      [ set pcolor yellow
-        set countdown audioduration]
-
-      ;;ask patches [ set tick_time_created tick-counter]
-      rt (prey-turn-coefficient / 100) * (subtract-headings (towards myself + 90) heading)
-      set speed max-prey-speed
-      ;;set color red
-    ]
+  if pcolor = green [
+    set speed (0.5 * min-predator-speed)
   ]
 end
 
 
 
-to flock
+;; ALL FUNCTIONS RELATED TO PREY
+
+to flock ;; This handles the 3 major rules of alignment, cohesion and separation for all the preys.
   find-flockmates ;; Other preys in sight will be set as flockmates
   if any? flockmates
   [
     find-nearest-neighbor
     ;;should test this
     ;; nearest neighbor in cone radius-vision and angle-field_of_view
-    if any? preys in-cone vision fov
+    let vision_value 0
+    ;;Finding flockmates is harder in the woods
+    ifelse pcolor = green
+    [set vision_value (vision * 0.5)]
+    [set vision_value vision]
+    if any? preys in-cone vision_value fov
     [
       ifelse distance nearest-neighbor < minimum-separation ;; preys must maintain a minimam distance between each other
       [separate]
@@ -272,10 +342,18 @@ to flock
   ]
 end
 
-to evaluate-flock
-  ;;Here we check if a prey belongs to a flock and evaluate the colour of the respective flock
+to add-error ;;to add noise to the heading of the flock
+  let err (-0.5 + random-float 1) * Noise
+  set heading heading + err;
+end
+
+to evaluate-flock ;;Here we check if a prey belongs to a flock and evaluate the colour of the respective flock
   ;;We also set the lifetime of the flock form the time it is created and call the required reporter to display the flock lifetime
   ;;If a prey is not in any flock then it becomes a flock of it's own with the flocksize of 1
+  let vision_value 0
+  ifelse pcolor = green
+    [set vision_value (vision * 0.5)]
+    [set vision_value vision]
 
   if flock-reference = Nobody [ set is-in-flock False ] ; make sure anything not in a flock doesn't think it is in a flock
   if is-in-flock = True ; checking to see if a flock has died out
@@ -301,11 +379,11 @@ to evaluate-flock
   [
     let x-cord item 0 ( flock-center flock-reference )
     let y-cord item 1 ( flock-center flock-reference )
-    if ( distancexy x-cord y-cord ) > ( vision * flock-detection-range) or subtract-headings ( average-schoolmate-heading ( [ flock-members ] of flock-reference ) ) heading > 60; checking to see if turtle has splintered from rest of flock, if so, remove it from the flock
+    if ( distancexy x-cord y-cord ) > ( vision_value * flock-detection-range) or subtract-headings ( average-schoolmate-heading ( [ flock-members ] of flock-reference ) ) heading > 60; checking to see if turtle has splintered from rest of flock, if so, remove it from the flock
     [
       ask other preys in-radius 1 with [ flock-reference = [ flock-reference ] of myself ]
       [
-        if ( distancexy ( item 0 ( flock-center flock-reference ) ) ( item 1 ( flock-center flock-reference ) ) ) > ( vision * flock-detection-range) or subtract-headings ( average-schoolmate-heading ( [ flock-members ] of flock-reference ) ) heading > flock-max-angle-devation
+        if ( distancexy ( item 0 ( flock-center flock-reference ) ) ( item 1 ( flock-center flock-reference ) ) ) > ( vision_value * flock-detection-range) or subtract-headings ( average-schoolmate-heading ( [ flock-members ] of flock-reference ) ) heading > flock-max-angle-devation
         [
           if verbose = True [ type "Turtle " type [ who ] of self print " has strayed from the flock" ]
           ask flock-reference [ remove-from-flock myself ]; remove myself from my old flock
@@ -322,12 +400,12 @@ to evaluate-flock
   ifelse is-in-flock = True ; is turtle in a flock?
   [
     if verbose = True [ type "Turtle " type [ who ] of self type "is in flock " print [ who ] of [ flock-reference ] of self ]
-    if any? other preys in-radius vision with [ is-in-flock = True ] with [ flock-reference != [ flock-reference ] of myself ]; check for nearby turtles that are in different flocks
+    if any? other preys in-radius vision_value with [ is-in-flock = True ] with [ flock-reference != [ flock-reference ] of myself ]; check for nearby turtles that are in different flocks
     [
       if verbose = True [ print "There are other nearby flocks" ]
       let current-school-size ( get-flock-size [ flock-reference ] of self )
       if verbose = True [ type "I am part of a school of " print current-school-size ]
-      let temp-list turtle-set other preys in-radius vision with [ is-in-flock = True ] with [ flock-reference != [ flock-reference ] of myself ] with [ ( get-flock-size flock-reference ) >= current-school-size ] with [ subtract-headings ( average-schoolmate-heading [ flock-members ] of flock-reference ) heading < 60]; are any nearby turtles in different, larger flocks that I am alligned with? if so, add them to a list
+      let temp-list turtle-set other preys in-radius vision_value with [ is-in-flock = True ] with [ flock-reference != [ flock-reference ] of myself ] with [ ( get-flock-size flock-reference ) >= current-school-size ] with [ subtract-headings ( average-schoolmate-heading [ flock-members ] of flock-reference ) heading < 60]; are any nearby turtles in different, larger flocks that I am alligned with? if so, add them to a list
       if count temp-list > 0 ; does the list have any members?
       [
         if verbose = True [ print "Found a bigger flock" ]
@@ -340,10 +418,10 @@ to evaluate-flock
   ]
   [
     if verbose = True [ type "Turtle " type [ who ] of self print " is not in a flock" ]
-    ifelse any? other preys in-radius vision with [ is-in-flock = True ] ; are there any pre-existing flocks the turtle can join?
+    ifelse any? other preys in-radius vision_value with [ is-in-flock = True ] ; are there any pre-existing flocks the turtle can join?
     [
       if verbose = True [ print "There are nearby flocks" ]
-      let potential-flock turtle-set other preys in-radius vision with [ is-in-flock = True ] ; grab any nearby turtles that are already in a flock
+      let potential-flock turtle-set other preys in-radius vision_value with [ is-in-flock = True ] ; grab any nearby turtles that are already in a flock
       set potential-flock potential-flock with [ flock-reference != Nobody ]
       set potential-flock potential-flock with [ subtract-headings ( average-schoolmate-heading ( [ flock-members ] of flock-reference ) ) heading < 60]; remove any that are not aligned with this turtle
       if count potential-flock > 0
@@ -355,7 +433,7 @@ to evaluate-flock
       ]
     ]
     [ ; if there are no pre-existing flocks, turtle starts its own
-      let potential-flock turtle-set other preys in-radius vision with [ is-in-flock = False ] ; Grab any nearby turtles not already in a flock
+      let potential-flock turtle-set other preys in-radius vision_value with [ is-in-flock = False ] ; Grab any nearby turtles not already in a flock
       set potential-flock potential-flock with [ subtract-headings ( average-schoolmate-heading potential-flock ) heading < 60]; remove any that that are not aligned with this turtle
       if count potential-flock > 0
       [
@@ -386,6 +464,116 @@ to evaluate-flock
   ]
 end
 
+;;NEW-CONTRIBUTION
+to check-patch
+  ;;identify if it is in the auditory/woods patch
+  if pcolor = black[
+    set speed min-prey-speed
+  ]
+  if pcolor = green [
+    set speed (0.5 * min-prey-speed)
+  ]
+   if pcolor = yellow
+   [
+
+    rt (prey-turn-coefficient / 100) * (-180 + random 361)
+    set speed (0.8 * max-prey-speed)
+   ]
+end
+
+;;NEW-CONTRIBUTION
+to scare-prey ;; predator procedure
+  rt 90
+  scare-right  ;; prey on right side will flee right
+  rt 180
+  scare-left  ;; prey on left side will flee left
+  rt 90
+end
+
+;;NEW-CONTRIBUTION
+to scare-right  ;; prey on right side will flee right, Based on whether the patch the prey is in is either green or not, the variables for vision, audio_range and audioduration need to be halved.
+  let vision_value 0
+  let audio_value 0
+  let duration_value 0
+  ifelse pcolor = green
+    [set vision_value (vision * 0.5)
+     set audio_value (audio_range * 0.5)
+     set duration_value (audioduration * 1)
+    ]
+    [set vision_value (vision)
+     set audio_value (audio_range)
+     set duration_value (audioduration)
+    ]
+
+  ask preys in-cone vision_value 180 [
+    if any? predators in-cone vision_value 270 [
+
+      ask patches in-radius audio_value
+      [
+        set pcolor yellow
+        set countdown duration_value
+
+      ]
+      rt (prey-turn-coefficient / 100) * (subtract-headings (towards myself - 90) heading)
+      set speed max-prey-speed
+    ]
+  ]
+end
+
+;;NEW-CONTRIBUTION
+to scare-left ;; prey on left side will flee left, Based on whether the patch the prey is in is either green or not, the variables for vision, audio_range and audioduration need to be halved.
+  let vision_value 0
+  let audio_value 0
+  let duration_value 0
+  ifelse pcolor = green
+    [set vision_value (vision * 0.5)
+     set audio_value (audio_range * 0.5)
+     set duration_value (audioduration * 1)
+    ]
+    [set vision_value (vision)
+     set audio_value (audio_range)
+     set duration_value (audioduration)
+    ]
+
+  ask preys in-cone vision_value 180 [
+    if any? predators in-cone vision_value 270 [
+
+      ask patches in-radius audio_value
+      [
+        set pcolor yellow
+        set countdown duration_value
+
+      ]
+
+      rt (prey-turn-coefficient / 100) * (subtract-headings (towards myself + 90) heading)
+      set speed max-prey-speed
+    ]
+  ]
+end
+
+
+;; Supporting functions for prey
+
+to align ;; aligns the preys heading towards it's flocks average heading
+  set-delay (align-coefficient / 100) * (subtract-headings ( average-schoolmate-heading flockmates ) heading) ;; asmpytotic approach to perfect alignment
+  rt get-delay latency
+end
+
+to cohere ;; individuals get closer towards nearby neighbours
+  ;; This handles cohesion in the flock where it is dependent on the cohere coefficient
+  rt (cohere-coefficient / 100) * (subtract-headings average-heading-towards-flockmates heading)
+end
+
+to separate ;; if there is a nearest neighbor in the flock in the 60degree field of view within the minimum separation distance then slow this turtle down or turn
+  ifelse member? nearest-neighbor flockmates in-cone minimum-separation 60
+  [
+    if speed > min-prey-speed
+    [set speed speed - .1 ] ;;set speed speed - .1]
+  ]
+  [ rt (separate-coefficient / 100 ) * (subtract-headings heading (towards nearest-neighbor)) ;;turns away from nearest neighbor
+  ]
+end
+
 to adjust-prey-speed ;;matches a turtle's speed with the rest of the flock.
   ifelse max [speed] of flockmates > speed + .1
   [ set speed speed + .1] ;;speed up if any flockmate is moving faster
@@ -397,46 +585,28 @@ to adjust-prey-speed ;;matches a turtle's speed with the rest of the flock.
 end
 
 to find-flockmates ;;finds potential flockmates for a flockless turtle
-  set flockmates other preys in-radius vision
+  let vision_value 0
+  ifelse pcolor = green
+    [set vision_value (vision * 0.5)]
+    [set vision_value vision]
+
+  set flockmates other preys in-radius vision_value
 end
 
 to find-nearest-neighbor ;;finds a turtle's nearest neighbour within a flock
   set nearest-neighbor min-one-of flockmates [distance myself]
 end
 
-to separate
-  ;; if there is a nearest neighbor in the flock in the 60degree field of view within the minimum separation distance
-  ;; then slow this turtle down or turn
-  ifelse member? nearest-neighbor flockmates in-cone minimum-separation 60
-  [
-    if speed > min-prey-speed
-    [set speed speed - .1 ] ;;set speed speed - .1]
-  ]
-  [ rt (separate-coefficient / 100 ) * (subtract-headings heading (towards nearest-neighbor)) ;;turns away from nearest neighbor
-  ]
-end
-
-to align
-  set-delay (align-coefficient / 100) * (subtract-headings ( average-schoolmate-heading flockmates ) heading) ;; asmpytotic approach to perfect alignment
-  rt get-delay latency
-end
-
-;;to add noise to the flock
-to add-error
-  let err (-0.5 + random-float 1) * Noise
-  set heading heading + err;
-end
-
-to remove-from-flock [ target ] ; removes a turtle from a flock-holder's flock-member list
+to remove-from-flock [ target ] ;; removes a turtle from a flock-holder's flock-member list
   set flock-members flock-members with [ self != target ]
 end
 
-to add-to-flock [ target ] ; adds a turtle to a flock-holder's flock-member list
+to add-to-flock [ target ] ;; adds a turtle to a flock-holder's flock-member list
   set flock-members ( turtle-set flock-members target )
 end
 
-to set-delay [ value ]
-  ;Adds a delay to reaction time by storing the desired heading in an array
+to set-delay [ value ] ;;Adds a delay to reaction time by storing the desired heading in an array
+
   ;This function shifts all of the values in this array over by 1
   ;then adds the latest input to the top of the array
   ;This occurs every tick, meaning each element of the array is an older input
@@ -454,21 +624,23 @@ to set-delay [ value ]
   ]
 end
 
-to-report get-delay [ delay-value ]
-  ;This function pulls an input value from the array of delayed inputs at a specified delay value
-  ;Effectively, this pulls the input value from (delay-value) ticks ago out of the array
+
+
+;; Reporters for plots and functions
+
+to-report get-delay [ delay-value ] ;This function pulls an input value from the array of delayed inputs at a specified delay value, effectively, this pulls the input value from (delay-value) ticks ago out of the array
+
   report array:item delay-list delay-value
 end
 
-to-report average-flock-heading-deviation
-  ;; This reports the mean deviation of all the preys in the flock from it's flock heading
+to-report average-flock-heading-deviation  ;; This reports the mean deviation of all the preys in the flock from it's flock heading
   let average-flock-heading average-schoolmate-heading flock-members
   let sum-deviation sum [ subtract-headings heading average-flock-heading ] of flock-members
   report ( sum-deviation / ( count flock-members ) )
 end
 
-to-report get-flock-size [ flock-ref ]
-  ;; This returns the size of the flock
+to-report get-flock-size [ flock-ref ]  ;; This returns the size of the flock
+
   if flock-ref = nobody [ report 0 ]
   ask flock-ref
   [
@@ -477,8 +649,8 @@ to-report get-flock-size [ flock-ref ]
   report val
 end
 
-to-report average-schoolmate-heading [ schoolmates ]
-  ;; This returns the average heading of all preys in the flock
+to-report average-schoolmate-heading [ schoolmates ] ;; This returns the average heading of all preys in the flock
+
   let x-component sum [dx] of schoolmates
   let y-component sum [dy] of schoolmates
   ifelse x-component = 0 and y-component = 0
@@ -486,13 +658,8 @@ to-report average-schoolmate-heading [ schoolmates ]
     [ report atan x-component y-component ]
 end
 
-to cohere
-  ;; This handles cohesion in the flock where it is dependent on the cohere coefficient
-  rt (cohere-coefficient / 100) * (subtract-headings average-heading-towards-flockmates heading)
-end
+to-report average-heading-towards-flockmates ;; This returns the mean heading angle of the prey towards it's flockmates.
 
-to-report average-heading-towards-flockmates
-  ;; This returns the mean heading angle of the prey towards it's flockmates.
   let x-component mean [sin (towards myself + 180)] of flockmates
   let y-component mean [cos (towards myself + 180)] of flockmates
   ifelse x-component = 0 and y-component = 0
@@ -500,15 +667,13 @@ to-report average-heading-towards-flockmates
     [ report atan x-component y-component ]
 end
 
-to-report flock-center [ flock-ref ]
-  ;; This returns the centre of the flock. It is called when we determine if a particular prey belongs to a flock.
+to-report flock-center [ flock-ref ] ;; This returns the coordinates of the centre of the flock
   let x-cord mean [ xcor ] of [ flock-members ] of flock-ref
   let y-cord mean [ ycor ] of [ flock-members ] of flock-ref
   report ( list x-cord y-cord )
 end
 
-to-report average-distance-from-flockmates [ schoolmates ]
-  ;;; Returns the mean distance of far a particular prey is from it's flockmates.
+to-report average-distance-from-flockmates [ schoolmates ] ;; Returns the mean distance of how far a particular prey is from it's flockmates.
   let turtle-list [ self ] of schoolmates
   let value 0
   foreach ( range count schoolmates )
@@ -520,8 +685,8 @@ to-report average-distance-from-flockmates [ schoolmates ]
   report value
 end
 
-to-report average-flock-spread [ schoolmates ]
-  ;; returns the amount of distance the flock has spread in terms of patches.
+to-report average-flock-spread [ schoolmates ] ;; returns the amount of distance the flock has spread in terms of patches.
+
   let value 0
   ;set val 0
   ask schoolmates
@@ -532,9 +697,9 @@ to-report average-flock-spread [ schoolmates ]
   report value
 end
 
-to-report cap-value [ value minval maxval ]
-  ;;returns the maxval if the number is above max
-  ;;returns minval if the number is below min
+to-report cap-value [ value minval maxval ] ;;returns the maxval if the number is above max or returns minval if the number is below min
+
+
   ifelse value > maxval
   [
     report maxval
@@ -548,8 +713,8 @@ to-report cap-value [ value minval maxval ]
   ]
 end
 
-to-report flock-velocity
-  ;; The velocity at which the flock is moving
+to-report flock-velocity ;; Returns the velocity of the flock
+
   if count flock-members = 0 [ report 0 ]
   let x-cord mean [ dx * speed ] of flock-members
   let y-cord mean [ dy * speed ] of flock-members
@@ -559,19 +724,25 @@ to-report flock-velocity
   report result
 end
 
-to-report average-flock-lifetime
-  ;;This checks if a flock has members and if there are members it returns the number of ticks the flock has lived
+to-report average-flock-lifetime ;;This checks if a flock has members and if there are members it returns the number of ticks the flock has lived
   ifelse empty? flock-lifetime-counter [ report 0 ] [ report mean flock-lifetime-counter ]
 end
 
-to-report average-flock-size
-  ;; returns the average size of the flock
+to-report average-flock-size ;; returns the average size of the flock
+
   let result mean ( [ count flock-members ] of flock-holders )
   report result
 end
 
-to-report predator-kill-number
+;;NEW-CONTRIBUTION
+to-report predator-kill-number ;; reports the number of kills made by the predators
   report predator-kill-counter
+end
+
+;;NEW-CONTRIBUTION
+to-report largest-flock-size ;; returns the largest flock size
+  let result count [ flock-members ] of max-one-of flock-holders [ count flock-members ]
+  report result
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -595,8 +766,8 @@ GRAPHICS-WINDOW
 30
 -30
 30
-0
-0
+1
+1
 1
 ticks
 30.0
@@ -659,7 +830,7 @@ predPop
 predPop
 0
 100
-1.0
+2.0
 1
 1
 NIL
@@ -674,7 +845,7 @@ Noise
 Noise
 0
 100
-5.0
+8.0
 1
 1
 Degrees
@@ -682,9 +853,9 @@ HORIZONTAL
 
 SLIDER
 13
-530
+570
 185
-563
+603
 fov
 fov
 0
@@ -704,7 +875,7 @@ latency
 latency
 0
 99
-4.0
+0.0
 1
 1
 ticks
@@ -729,9 +900,9 @@ NIL
 
 SLIDER
 14
-493
+533
 186
-526
+566
 vision
 vision
 1
@@ -744,9 +915,9 @@ HORIZONTAL
 
 SLIDER
 13
-569
+609
 194
-602
+642
 minimum-separation
 minimum-separation
 0
@@ -759,9 +930,9 @@ HORIZONTAL
 
 SLIDER
 14
-415
+455
 186
-448
+488
 min-prey-speed
 min-prey-speed
 0
@@ -867,16 +1038,16 @@ MONITOR
 1466
 100
 Largest Flock Size
-count [ flock-members ] of max-one-of flock-holders [ count flock-members ]
+largest-flock-size
 0
 1
 11
 
 SLIDER
 13
-685
+725
 186
-718
+758
 flock-detection-range
 flock-detection-range
 0
@@ -889,9 +1060,9 @@ HORIZONTAL
 
 SLIDER
 13
-647
+687
 203
-680
+720
 flock-max-angle-devation
 flock-max-angle-devation
 0
@@ -1061,7 +1232,7 @@ min-predator-speed
 min-predator-speed
 0
 3
-0.7
+0.1
 0.1
 1
 NIL
@@ -1091,7 +1262,7 @@ max-predator-speed
 max-predator-speed
 0
 5
-1.5
+1.4
 0.1
 1
 NIL
@@ -1099,9 +1270,9 @@ HORIZONTAL
 
 SLIDER
 13
-608
+648
 194
-641
+681
 prey-turn-coefficient
 prey-turn-coefficient
 0
@@ -1114,9 +1285,9 @@ HORIZONTAL
 
 SLIDER
 14
-453
+493
 186
-486
+526
 max-prey-speed
 max-prey-speed
 0
@@ -1128,10 +1299,10 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-14
-363
-188
-403
+17
+418
+191
+458
 The parameters for Prey
 16
 0.0
@@ -1206,7 +1377,7 @@ audioduration
 audioduration
 0
 100
-5.0
+4.0
 1
 1
 NIL
@@ -1240,40 +1411,74 @@ predator-kill-counter
 1
 11
 
+SLIDER
+20
+343
+192
+376
+audio_range
+audio_range
+2
+20
+5.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+20
+379
+192
+412
+clusterNumber
+clusterNumber
+0
+10
+5.0
+1
+1
+NIL
+HORIZONTAL
+
 @#$#@#$#@
 ## WHAT IS IT?
 
-The model explores how the school structure of a fish is affected based on each fish's vision and the reaction time in terms of latency. The flocks cerated do not have any specific leader, but every individual in the flock follows the same set of rules
+This is an extension of the base model which explored how the school structure of a fish is affected based on each fish's vision and the reaction time in terms of latency. The flocks cerated do not have any specific leader, but every individual in the flock follows the same set of rules. 
+This model is extended by the addition of auditory cues to the preys, addition of predators & obstacles in the scene. 
 
 ## HOW IT WORKS
 
-Every individual follows three rules : "Separation", "Alignment" and "Cohesion".
+The Predators in the model have the sole intention of hunting down preys, however, until a predator find a prey, it keeps wandering. If the predator successfullly finds a prey, then it charges towards the prey and eats it. This charge will not be available for a set duration of time defined by "burst-recharge-time"
 
-"Separation" means that the individual avoid getting too close to another individual.
+The preys in this model follow three rules : "Separation", "Alignment" and "Cohesion" : 
+- "Separation" means that the preys avoid getting too close to another individual.
+- "Alignment" means that the preys moves in the same direction as the nearby individuals.
+- "Cohesion" means that the preys tend to get closer and move towards nearby neighbours.
 
-"Alignment" means that the individual moves in the same direction as the nearby individuals.
+In this model, the above rules are preceeded by the factors - Latency, vision and auditory cues. Which are defined as follows : 
+- Latency is the delay in the reaction time after an individual perceives another individual in it's vicinity.
+- Vision is the range of vicinity for each individual
+- Auditory cues which enable the preys to sense danger/predators in the scene providing a better chance to flee
 
-"Cohesion" means that the individual tend to get closer and move towards nearby neighbours.
+The obstacles in the scene are in the form of cluster of woods/trees, when the preys or predators pass through the woods, their audioitory range (only for preys) and vision is halved. Also, when these agents are in woods, their speed is half of their minimum speed.
 
-The above rules are preceeded by the factors - Latency and vision.
-
-Latency is the delay in the reaction time after an individual perceives another individual in it's vicinity.
-
-Vision is the range of vicinity for each individual
-
-All of the above affects the overall behaviour of each individual.
+All of the above affects the overall behaviour of each individual and the survival rate of the preys.
 
 ## HOW TO USE IT
 
-Firstly, determine the parameters you would like to observe in the simulation.
+Firstly, determine the parameters you would like to observe in the simulation. For starters, we have provided a RESET button to initialize the default parameters.
 
 The primary parameters are:
-preyPop - it is the number of fishes you would like to see in the model.
+predPop - it is the number of predators you would like to see in the model
+preyPop - it is the number of preys you would like to see in the model.
 Latency - the latency in the reaction time in terms of seconds
 Vision - it is the distance that each individual can see 360 degrees around it
 fov - it is the field of view in terms of degrees from the head of the individual.
+audioduration - it is the amount of time the audio can be heard, it is shown as yellow patches and the durationis in terms of ticks
+audio_range - it is the range the audio can travel from it's source
 
-The other parameters are built on top of these parameters and to toggle visualizations.
+The other parameters are built on top of these parameters and to toggle visualizations of flocks.
 
 The default parameters generate beautiful results as well.
 ## THINGS TO NOTICE
@@ -1284,28 +1489,33 @@ The latency influences how fast or slowly each individual joins a school or not.
 
 The dynamic behaviour of school influences on how fishes stay in the school and how fishes tend to leave a school. There is no certainity that a particular fish will remain in the same school forever.
 
+The addition of predators heavily affects the schooling behaviour. The preys flee away from the predators in their maximum speed and the preys signal audiotry cues to help other preys flee from the spot. During such a time of panic, the flock may sometime split into sub groups.
+
+When the flock passes through obstacles/woods, the range of vision and audio duration is halved. Because of hinderd vision we see multiple instances where a flock is separated into sub groups in the woods.
+
+ 
 ## THINGS TO TRY
 
 Toggle the switches for visualization of schools and observe how other sliders make or break schools.
 
-You can see how the delay, vision and the field of view sliders affect the overall behaviour of a flock.
-
+- increase the cluster of trees and observe if predators can attack inside the woods and how preys may escape this attack
 
 ## EXTENDING THE MODEL
 
+We can extend this work by having schooling of predaors, where the predators attack in packs.
+Giving a fair amount of auditory cues to the predators to communicate between them for alerting presence of preys would be interesting to try.
 
 
 ## NETLOGO FEATURES
 
-(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
+There is an unusual behaviour in Netlogo when we run the model on "continuous" update mode. The colouring of patches for a set audio-range seems like they burst out from center beyond the defined range and then converge to the given range. The reason may be the underlying implementation of how patches are coloured on-tick.
+For our model, we view updates "on-tick".
 
 ## RELATED MODELS
 
-(models in the NetLogo Models Library and elsewhere which are of related interest)
+The base model was written by Alpheus Feltham and Bharath Raj Mahadeva Rao, both from the University of Groningen.
 
 ## CREDITS AND REFERENCES
-
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
 @#$#@#$#@
 default
 true
@@ -1542,13 +1752,13 @@ Circle -7500403 true true 120 120 60
 
 tree
 false
-0
-Circle -7500403 true true 118 3 94
+5
+Circle -14835848 true false 118 3 94
 Rectangle -6459832 true false 120 195 180 300
-Circle -7500403 true true 65 21 108
-Circle -7500403 true true 116 41 127
-Circle -7500403 true true 45 90 120
-Circle -7500403 true true 104 74 152
+Circle -14835848 true false 65 21 108
+Circle -14835848 true false 116 41 127
+Circle -14835848 true false 45 90 120
+Circle -14835848 true false 131 101 127
 
 triangle
 false
@@ -1719,6 +1929,99 @@ NetLogo 6.1.1
     </enumeratedValueSet>
     <enumeratedValueSet variable="noise">
       <value value="0"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="main-experiment" repetitions="40" sequentialRunOrder="false" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <timeLimit steps="4000"/>
+    <metric>count turtles</metric>
+    <metric>predator-kill-number</metric>
+    <metric>average-flock-lifetime</metric>
+    <metric>max flock-lifetime-counter</metric>
+    <metric>largest-flock-size</metric>
+    <enumeratedValueSet variable="latency">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="Noise">
+      <value value="8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="predator-vision">
+      <value value="3"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="flock-detection-range">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="align-coefficient">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="clusterNumber">
+      <value value="0"/>
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="burst-recharge-time">
+      <value value="59"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="fov">
+      <value value="205"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="vision">
+      <value value="6"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="audioduration">
+      <value value="2"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-predator-speed">
+      <value value="1.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="cohere-coefficient">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="prey-turn-coefficient">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-prey-speed">
+      <value value="1.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="min-prey-speed">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="predPop">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="audio_range">
+      <value value="0"/>
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="predator-turn-coefficient">
+      <value value="15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="preyPop">
+      <value value="50"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="predator-burst-energy">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="separate-coefficient">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="verbose">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="flock-color-on">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="minimum-separation">
+      <value value="0.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="visualize-flock-creation">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="min-predator-speed">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="flock-max-angle-devation">
+      <value value="120"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
